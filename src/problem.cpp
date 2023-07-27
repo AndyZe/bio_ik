@@ -56,12 +56,12 @@ enum class Problem::GoalType
 
 size_t Problem::addTipLink(const moveit::core::LinkModel* link_model)
 {
-    if(link_tip_indices[link_model->getLinkIndex()] < 0)
+    if(link_tip_indices.at(link_model->getLinkIndex()) < 0)
     {
-        link_tip_indices[link_model->getLinkIndex()] = tip_link_indices.size();
+        link_tip_indices.at(link_model->getLinkIndex()) = tip_link_indices.size();
         tip_link_indices.push_back(link_model->getLinkIndex());
     }
-    return link_tip_indices[link_model->getLinkIndex()];
+    return link_tip_indices.at(link_model->getLinkIndex());
 }
 
 Problem::Problem()
@@ -113,7 +113,7 @@ void Problem::initialize(moveit::core::RobotModelConstPtr robot_model, const mov
             }
         }
         for(size_t i = 0; i < active_variables.size(); i++)
-            if(name == robot_model->getVariableNames()[active_variables[i]]) return i;
+            if(name == robot_model->getVariableNames().at(active_variables.at(i))) return i;
         for(auto& n : joint_model_group->getVariableNames())
         {
             if(n == name)
@@ -154,7 +154,7 @@ void Problem::initialize(moveit::core::RobotModelConstPtr robot_model, const mov
 
         goal_info.frame = Frame::identity();
         goal_info.tip_index = 0;
-        if(goal_info.goal_context.goal_link_indices_.size()) goal_info.tip_index = goal_info.goal_context.goal_link_indices_[0];
+        if(goal_info.goal_context.goal_link_indices_.size()) goal_info.tip_index = goal_info.goal_context.goal_link_indices_.at(0);
 
         if(auto* g = dynamic_cast<const PositionGoal*>(goal_info.goal))
         {
@@ -193,13 +193,13 @@ void Problem::initialize(moveit::core::RobotModelConstPtr robot_model, const mov
     for(auto& u : joint_usage)
         u = 0;
     for(auto tip_index : tip_link_indices)
-        for(auto* link_model = robot_model->getLinkModels()[tip_index]; link_model; link_model = link_model->getParentLinkModel())
-            joint_usage[link_model->getParentJointModel()->getJointIndex()] = 1;
+        for(auto* link_model = robot_model->getLinkModels().at(tip_index); link_model; link_model = link_model->getParentLinkModel())
+            joint_usage.at(link_model->getParentJointModel()->getJointIndex()) = 1;
     if(options)
         for(auto& fixed_joint_name : options->fixed_joints)
-            joint_usage[robot_model->getJointModel(fixed_joint_name)->getJointIndex()] = 0;
+            joint_usage.at(robot_model->getJointModel(fixed_joint_name)->getJointIndex()) = 0;
     for(auto* joint_model : joint_model_group->getActiveJointModels())
-        if(joint_usage[joint_model->getJointIndex()] && !joint_model->getMimic())
+        if(joint_usage.at(joint_model->getJointIndex()) && !joint_model->getMimic())
             for(auto& n : joint_model->getVariableNames())
                 addActiveVariable(n);
 
@@ -213,14 +213,14 @@ void Problem::initialize(moveit::core::RobotModelConstPtr robot_model, const mov
         {
             for(size_t i = 0; i < active_variables.size(); i++)
             {
-                auto ivar = active_variables[i];
-                minimal_displacement_factors[i] = modelInfo.getMaxVelocityRcp(ivar) / s;
+                auto ivar = active_variables.at(i);
+                minimal_displacement_factors.at(i) = modelInfo.getMaxVelocityRcp(ivar) / s;
             }
         }
         else
         {
             for(size_t i = 0; i < active_variables.size(); i++)
-                minimal_displacement_factors[i] = 1.0 / active_variables.size();
+                minimal_displacement_factors.at(i) = 1.0 / active_variables.size();
         }
     }
 
@@ -261,7 +261,7 @@ bool Problem::checkSolutionActiveVariables(const std::vector<Frame>& tip_frames,
     for(auto& goal : goals)
     {
         const auto& fa = goal.frame;
-        const auto& fb = tip_frames[goal.tip_index];
+        const auto& fb = tip_frames.at(goal.tip_index);
 
         switch(goal.goal_type)
         {

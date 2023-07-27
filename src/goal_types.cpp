@@ -49,25 +49,25 @@ void TouchGoal::describe(GoalContext& context) const
     auto* robot_model = &context.getRobotModel();
     {
         static std::map<const moveit::core::RobotModel*, CollisionModel*> collision_cache;
-        if(collision_cache.find(robot_model) == collision_cache.end()) collision_cache[&context.getRobotModel()] = new CollisionModel();
-        collision_model = collision_cache[robot_model];
+        if(collision_cache.find(robot_model) == collision_cache.end()) collision_cache.at(&context.getRobotModel()) = new CollisionModel();
+        collision_model = collision_cache.at(robot_model);
         collision_model->collision_links.resize(robot_model->getLinkModelCount());
     }
     link_model = robot_model->getLinkModel(this->getLinkName());
     size_t link_index = link_model->getLinkIndex();
     auto touch_goal_normal = normal.normalized();
     // auto fbrot = fb.rot.normalized();
-    auto& collision_link = collision_model->collision_links[link_index];
+    auto& collision_link = collision_model->collision_links.at(link_index);
     if(!collision_link.initialized)
     {
         collision_link.initialized = true;
         collision_link.shapes.resize(link_model->getShapes().size());
         for(size_t shape_index = 0; shape_index < link_model->getShapes().size(); shape_index++)
         {
-            collision_link.shapes[shape_index] = std::make_shared<CollisionShape>();
-            auto& s = *collision_link.shapes[shape_index];
-            s.frame = Frame(link_model->getCollisionOriginTransforms()[shape_index]);
-            auto* shape = link_model->getShapes()[shape_index].get();
+            collision_link.shapes.at(shape_index) = std::make_shared<CollisionShape>();
+            auto& s = *collision_link.shapes.at(shape_index);
+            s.frame = Frame(link_model->getCollisionOriginTransforms().at(shape_index));
+            auto* shape = link_model->getShapes().at(shape_index).get();
             // LOG(link_model->getName(), shape_index, link_model->getShapes().size(), typeid(*shape).name());
             if(auto* mesh = dynamic_cast<const shapes::Mesh*>(shape))
             {
@@ -141,7 +141,7 @@ void TouchGoal::describe(GoalContext& context) const
             }
             else
             {
-                s.geometry = collision_detection::createCollisionGeometry(link_model->getShapes()[shape_index], link_model, shape_index);
+                s.geometry = collision_detection::createCollisionGeometry(link_model->getShapes().at(shape_index), link_model, shape_index);
             }
             // LOG("b");
         }
@@ -159,12 +159,12 @@ double TouchGoal::evaluate(const GoalContext& context) const
     auto& collision_link = collision_model->collision_links[link_index];
     for(size_t shape_index = 0; shape_index < link_model->getShapes().size(); shape_index++)
     {
-        if(!collision_link.shapes[shape_index]->geometry) continue;
-        auto* shape = link_model->getShapes()[shape_index].get();
+        if(!collision_link.shapes.at(shape_index)->geometry) continue;
+        auto* shape = link_model->getShapes().at(shape_index).get();
         // LOG(shape_index, typeid(*shape).name());
         if(auto* mesh = dynamic_cast<const shapes::Mesh*>(shape))
         {
-            auto& s = collision_link.shapes[shape_index];
+            auto& s = collision_link.shapes.at(shape_index);
             double d = DBL_MAX;
             auto goal_normal = normal;
             quat_mul_vec(fb.rot.inverse(), goal_normal, goal_normal);
@@ -217,8 +217,8 @@ double TouchGoal::evaluate(const GoalContext& context) const
             fcl::DistanceRequest request;
             fcl::DistanceResult result;
             auto pos1 = position - normal * offset * 2;
-            auto* shape2 = collision_link.shapes[shape_index]->geometry->collision_geometry_.get();
-            auto frame2 = Frame(fb.pos, fb.rot.normalized()) * collision_link.shapes[shape_index]->frame;
+            auto* shape2 = collision_link.shapes.at(shape_index)->geometry->collision_geometry_.get();
+            auto frame2 = Frame(fb.pos, fb.rot.normalized()) * collision_link.shapes.at(shape_index)->frame;
             double d = fcl::distance(&shape1, fcl::Transform3f(fcl::Vec3f(pos1.x(), pos1.y(), pos1.z())), shape2, fcl::Transform3f(fcl::Quaternion3f(frame2.rot.w(), frame2.rot.x(), frame2.rot.y(), frame2.rot.z()), fcl::Vec3f(frame2.pos.x(), frame2.pos.y(), frame2.pos.z())), request, result);
             d -= offset;
             if(d < dmin) dmin = d;

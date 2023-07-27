@@ -194,7 +194,7 @@ struct IKBase : Random
     {
         temp_active_variable_positions.resize(problem.active_variables.size());
         for(size_t i = 0; i < temp_active_variable_positions.size(); i++)
-            temp_active_variable_positions[i] = variable_positions[problem.active_variables[i]];
+            temp_active_variable_positions.at(i) = variable_positions.at(problem.active_variables.at(i));
         return temp_active_variable_positions.data();
     }
 
